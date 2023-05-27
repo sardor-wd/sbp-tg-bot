@@ -66,14 +66,11 @@ def image_received(update: Update, context: CallbackContext):
         url = product[3]
         photo_data = product[4]
 
-        # Send the image as a photo
-
         context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_data)
 
         response = f"{title}\n<b>{price}</b>\n{url}\n\n"
         update.message.reply_html(response)
 
-    # Commit the transaction
     connection.commit()
     connection.close()
 
