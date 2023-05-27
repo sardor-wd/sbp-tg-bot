@@ -13,7 +13,7 @@ data = np.load('vectorized_features.npz')
 index = data['vectors']
 product_ids = data['ids']
 
-vector_index = 14
+vector_index = 0
 vector = index[vector_index]
 
 scores = cosine_search(index, vector)
@@ -22,4 +22,3 @@ n_closest = np.argsort(scores)[::-1][:5]
 
 closest_product_ids = product_ids[n_closest]
 
-print(closest_product_ids)

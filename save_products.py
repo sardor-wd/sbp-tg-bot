@@ -5,9 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 import psycopg2
 
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 
 def download_product_photos():
     connection_params = {
@@ -91,7 +89,5 @@ def main():
     execution_time = end_time - start_time
     logging.info(f'Total execution time: {execution_time} seconds')
 
-
 if __name__ == '__main__':
     main()
-ID: 20687
