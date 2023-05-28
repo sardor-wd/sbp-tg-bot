@@ -11,6 +11,11 @@ import psycopg2
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+vectorizer = None
+vectors = None
+product_ids = None
+connection = None
+
 
 def preprocess_image(image):
     image = image.resize((256, 256))
@@ -39,14 +44,14 @@ def start_command(update: Update, context: CallbackContext):
 
 
 def image_received(update: Update, context: CallbackContext):
-    photo = update.message.photo[-1]  # Get the highest resolution photo
+    global vectorizer, vectors, product_ids, connection
+
+    photo = update.message.photo[-1]
     image_file = context.bot.get_file(photo.file_id)
     image_data = image_file.download_as_bytearray()
 
     image = Image.open(BytesIO(image_data))
     processed_image = preprocess_image(image)
-
-    vectorizer, vectors, product_ids, connection = context.bot_data['features']
 
     scores = cosine_search(vectorizer, vectors, processed_image)
 
@@ -71,11 +76,10 @@ def image_received(update: Update, context: CallbackContext):
         response = f"{title}\n<b>{price}</b>\n{url}\n\n"
         update.message.reply_html(response)
 
-    connection.commit()
-    connection.close()
-
 
 def main():
+    global vectorizer, vectors, product_ids, connection
+
     token = '6001288764:AAHBfbPIcZUBWDNmFVDb9pBsn8moticRkrg'
     file_path = 'vectorized_features.npz'
 
@@ -98,8 +102,6 @@ def main():
 
     updater = Updater(token, use_context=True)
     dispatcher = updater.dispatcher
-
-    dispatcher.bot_data['features'] = (vectorizer, vectors, product_ids, connection)
 
     dispatcher.add_handler(CommandHandler("start", start_command))
     dispatcher.add_handler(MessageHandler(Filters.photo, image_received))
