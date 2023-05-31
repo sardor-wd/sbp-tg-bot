@@ -1,13 +1,13 @@
 import os
-import urllib.request
+import aiohttp
+import asyncio
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor
 import psycopg2
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def download_product_photos():
+async def download_product_photos():
     connection_params = {
         'host': '127.0.0.1',
         'port': '5432',
@@ -27,10 +27,10 @@ def download_product_photos():
         products = cursor.fetchall()
 
         os.makedirs('photos', exist_ok=True)
-        max_workers = 10
+        max_connections = 10
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = []
+        async with aiohttp.ClientSession() as session:
+            tasks = []
 
             for product in products:
                 product_id = product[0]
@@ -39,11 +39,15 @@ def download_product_photos():
                 filename = f'product_{product_id}.png'
                 save_path = os.path.join('photos', filename)
 
-                future = executor.submit(download_image, image_url, save_path, filename)
-                futures.append(future)
+                task = download_image(session, image_url, save_path, filename)
+                tasks.append(task)
 
-            for future in futures:
-                future.result()
+                if len(tasks) >= max_connections:
+                    await asyncio.gather(*tasks)
+                    tasks = []
+
+            if tasks:
+                await asyncio.gather(*tasks)
 
         logging.info('All photos downloaded successfully.')
 
@@ -57,22 +61,23 @@ def download_product_photos():
             conn.close()
 
 
-def download_image(image_url, save_path, filename):
+async def download_image(session, image_url, save_path, filename):
     try:
-        response = urllib.request.urlopen(image_url)
-        expected_size = int(response.headers['Content-Length'])
-        data = response.read()
+        async with session.get(image_url) as response:
+            response.raise_for_status()
+            expected_size = int(response.headers['Content-Length'])
+            data = await response.read()
 
-        if len(data) != expected_size:
-            raise ValueError('Incomplete download')
+            if len(data) != expected_size:
+                raise ValueError('Incomplete download')
 
-        with open(save_path, 'wb') as file:
-            file.write(data)
+            with open(save_path, 'wb') as file:
+                file.write(data)
 
-        logging.info(f'Saved photo: {filename}')
+            logging.info(f'Saved photo: {filename}')
 
-    except urllib.error.URLError as e:
-        if isinstance(e.reason, urllib.error.HTTPError) and e.reason.code == 403:
+    except aiohttp.ClientError as e:
+        if isinstance(e, aiohttp.ClientResponseError) and e.status == 403:
             logging.warning(f'Skipped photo: {filename} (Forbidden)')
         else:
             logging.error(f'Error downloading photo: {filename}')
@@ -84,7 +89,9 @@ def download_image(image_url, save_path, filename):
 
 def main():
     start_time = time.time()
-    download_product_photos()
+
+    asyncio.run(download_product_photos())
+
     end_time = time.time()
     execution_time = end_time - start_time
     logging.info(f'Total execution time: {execution_time} seconds')

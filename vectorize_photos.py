@@ -44,7 +44,7 @@ def save_features(vectors, ids, output_file):
 
 def main():
     photo_folder_path = 'photos/'
-    num_photos = 11270
+    num_photos = 100
 
     start_time = time.time()
 

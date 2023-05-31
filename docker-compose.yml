@@ -1,0 +1,23 @@
+version: "3"
+services:
+  pricehub-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=pricehub
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - TELEGRAM_TOKEN=6001288764:AAHBfbPIcZUBWDNmFVDb9pBsn8moticRkrg
+    depends_on:
+      - postgres
+    restart: unless-stopped
+  postgres:
+    image: postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=pricehub
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
