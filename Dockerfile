@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 ENV PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 
-CMD ["python", "main.py"]
+CMD ["python", "bot_start.py"]
