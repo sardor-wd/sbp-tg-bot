@@ -5,18 +5,26 @@ import time
 import numpy as np
 import tensorflow as tf
 import tensorflow_hub as hub
-from numba import njit, prange
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 import psycopg2
 
-os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
+
+def set_up_memory():
+    tf.get_logger().setLevel(logging.ERROR)
+
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        try:
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+        except RuntimeError as e:
+            print(e)
 
 
-@njit(parallel=True, fastmath=True)
 def l2_distance(index, vector):
     scores = np.zeros((index.shape[0],))
-    for i in prange(index.shape[0]):
+    for i in range(index.shape[0]):
         scores[i] = np.linalg.norm(index[i] - vector)
     return scores
 
@@ -38,7 +46,7 @@ class BotHandler:
         self.model = self._build_model()
 
     def _load_index(self):
-        data = np.load(os.path.join(self.index_dir, 'index.npz'))
+        data = np.load(os.path.join(self.index_dir, 'index.npz'), allow_pickle=True)
         self.index = data['vectors'].astype(np.float32)
         self.product_ids = data['ids']
 
@@ -97,7 +105,7 @@ class BotHandler:
         updater.start_polling()
 
     def _start(self, update: Update, context: CallbackContext):
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Добро пожаловать в поисковый бот !')
+        context.bot.send_message(chat_id=update.effective_chat.id, text='Добро пожаловать в поисковый бот!')
 
     def _handle_photo(self, update: Update, context: CallbackContext):
         file_id = update.message.photo[-1].file_id
@@ -129,5 +137,6 @@ if __name__ == "__main__":
     parser.add_argument('--index', type=str, help='Path to the index directory', default="data")
     args = parser.parse_args()
 
+    set_up_memory()
     bot_handler = BotHandler(args.token, args.index)
     bot_handler.start()
